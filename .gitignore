@@ -1,0 +1,8 @@
+config.json
+**/evidence/generated/
+__pycache__/
+*.pyc
+# dry-run and job receipts written next to a card
+**/CODEX-RUN.md
+**/CODEX-LAST.md
+**/evidence/

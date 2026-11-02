@@ -1,0 +1,18 @@
+{
+  "_comment": "Copy to config.json (ignored by git) and fill in. Every path is the operator's own. Forward slashes work on Windows too; a backslash must be doubled in JSON.",
+  "repo_root": "C:/path/to/your/project",
+  "canon_root": "C:/path/to/canon-method",
+  "journal_path": "C:/path/to/private/journal/notes",
+  "hub_remote": "hub",
+  "codex_bin_dir": "%LOCALAPPDATA%/OpenAI/Codex/bin",
+  "codex_exe": "",
+  "default_codex_model": "",
+  "default_claude_lane_model": "claude-opus-5-5",
+  "protected_paths": [
+    "C:/path/to/the/operators/live/checkout"
+  ],
+  "protected_ports": [
+    5173
+  ],
+  "worker_name": "the Codex worker"
+}
