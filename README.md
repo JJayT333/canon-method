@@ -17,9 +17,9 @@ Everything you say is banked verbatim, with the clock minute, before any work st
 |---|---|
 | `CLAUDE.md` and `AGENTS.md` | The one law, identical. Claude Code reads the first, Codex reads the second. |
 | `skills/` | Twelve skills the desk runs: open, bank words, record a ruling, develop a prompt, fire a lane, fire a checker, sweep, handoff, close, discuss, abort and pause, orphan sweep. |
-| `launchers/` | `fire-codex-job.ps1` runs one card as a headless Codex job. `check-lane.ps1` prints the facts about a lane (process, receipt, worktree) before the desk writes RUNNING or DONE. |
-| `tools/card_check.py` | The card checker. The launcher refuses a card that fails it. |
-| `cards/` | Three templates (Claude lane card, Codex job card, acceptance card) and two filled examples on a sample web app with a theme switcher. |
+| `launchers/` | `fire-codex-job.ps1` runs one card as a headless Codex job. `check_card.ps1` is the card gate the desk runs before firing a Claude lane with the Agent tool. `check-lane.ps1` prints the facts about a lane (process, receipt, worktree) before the desk writes RUNNING or DONE. |
+| `tools/card_check.py` | The card checker, two forms: the Codex card (the default) and the Claude lane card (`--form claude`, or `--form auto` by line one). The Codex launcher and the card gate both refuse a card that fails it. |
+| `cards/` | Three templates (Claude lane card, Codex job card, acceptance card) and three filled examples on a sample web app with a theme switcher: a Codex build card, the same build as a Claude lane card, and the Codex check card. |
 | `decisions/` | The five rules that bind every card: acceptance, save as you go, walked live, the redo cap, parked findings. |
 | `config.example.json` | Every path that is yours. Copy to `config.json` and fill it in. |
 
@@ -80,7 +80,13 @@ A card is one file a worker can read in one screen and act on with no questions.
 python tools/card_check.py cards/examples/theme-switcher-build/CARD.md
 ```
 
-The Claude lane card (`cards/TEMPLATE-claude-lane-card.md`) is looser in shape; it is fired with the Agent tool, not the launcher, and the lane's model is named on its first line.
+The Claude lane card (`cards/TEMPLATE-claude-lane-card.md`) has its own form: line one `# CARD: <title> (<date>, ...)`, a `Model:` line, an `Operator's words, verbatim:` block led by the clock or date, and `## What this is`, `## Boundaries`, `## Commit and push` and `## OUTPUT.md shape` sections. The same checker reads it with `--form claude` (or `--form auto`), and the desk runs the gate before the Agent call:
+
+```bash
+pwsh -NoProfile -File launchers/check_card.ps1 -Card cards/examples/theme-switcher-build-claude/CARD.md
+```
+
+It is fired with the Agent tool, not the launcher, and the lane's model is named on its `Model:` line.
 
 ## Honest limits
 

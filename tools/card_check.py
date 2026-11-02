@@ -1,11 +1,15 @@
 """Check the mechanically verifiable parts of a worker card (canon method v1).
 
-Usage: python tools/card_check.py <CARD.md> [--withhold-words]
+Usage: python tools/card_check.py <CARD.md> [--form codex|claude|auto] [--withhold-words]
 
-Exit 0 and PASS when every mechanical rule holds; exit 1 and one FAIL line per
-rule broken otherwise. The MANUAL lines name what a script cannot judge.
---withhold-words is for a card sent to a model the operator does not want quoted:
-the objective must then say "Words withheld" instead of quoting them.
+Two forms. The Codex form (line one Runs on:, then OBJECTIVE to RETURN) is the default and is
+what launchers/fire-codex-job.ps1 runs. The Claude lane form (line one # CARD:, a Model: line,
+an Operator's words, verbatim: block, ## sections) is what skills/fire-opus-worker fires with the
+Agent tool; launchers/check_card.ps1 is its gate. --form auto picks by line one.
+
+Exit 0 and PASS when every mechanical rule holds; exit 1 and one FAIL line per rule broken
+otherwise. The MANUAL lines name what a script cannot judge. --withhold-words is for a Codex-form
+card sent to a model the operator does not want quoted: the objective must then say "Words withheld".
 """
 import argparse
 import re
@@ -35,9 +39,11 @@ WORDS = r"(?:Operator's|The operator's|Operator) words"
 MAX_LINES = 60
 EM_DASH = chr(0x2014)
 EN_DASH = chr(0x2013)
+CARD_PATH = re.compile(r'(?:[A-Za-z]:[\\/]|/|(?:[\w.-]+[\\/])+)[^\s,;]+')
 
 
 def check(text, withhold=False):
+    """Check the Codex form (cards/TEMPLATE-codex-job-card.md and TEMPLATE-acceptance-card.md)."""
     lines = text.splitlines()
     failures = []
 
@@ -89,7 +95,7 @@ def check(text, withhold=False):
         elif not re.search(WORDS + r'\s*\([^)]*\d{4}[-/]\d{1,2}[-/]\d{1,2}[^)]*\)\s*:\s*["“][^"”\n]+["”]', objective):
             fail(2, "OBJECTIVE needs Operator's words (date): followed by a quoted line.")
     save = value("SAVE AS YOU GO")
-    if save and (not re.search(r'(?:[A-Za-z]:[\\/]|/|(?:[\w.-]+[\\/])+)[^\s,;]+', save) or 'STATUS: RUNNING' not in save):
+    if save and (not CARD_PATH.search(save) or 'STATUS: RUNNING' not in save):
         fail(3, "SAVE AS YOU GO needs an exact path and STATUS: RUNNING.")
     bad = value("WHAT BAD LOOKS LIKE")
     if bad:
@@ -113,21 +119,122 @@ def check(text, withhold=False):
     return sorted(failures), found
 
 
+# The Claude lane form (cards/TEMPLATE-claude-lane-card.md).
+CLAUDE_TITLE = re.compile(r"^# CARD:\s*\S.*\(\s*\d{4}-\d{2}-\d{2}\b[^()]*\)")
+DATED_QUOTE = re.compile(r'(?:\d{4}-\d{2}-\d{2}|\b\d{1,2}:\d{2}\b)[^"“\n]{0,40}["“][^"”\n]+["”]')
+NO_COMMIT = re.compile(r"\bno (?:git )?commits?\b|\bnever commits?\b|\bcommit nothing\b", re.I)
+WORDS_BLOCK = re.compile(r"^(?:Operator's|The operator's|Operator) words, verbatim\b.*:")
+
+
+def detect_form(text):
+    """The Claude lane form starts '# CARD:'; everything else is read as the Codex form."""
+    return "claude" if text.startswith("# CARD:") else "codex"
+
+
+def check_claude(text):
+    """Check the Claude lane card form: title, Model, Operator's words, sections."""
+    lines = text.splitlines()
+    failures = []
+
+    def fail(number, message):
+        failures.append((number, message))
+
+    if not lines or not CLAUDE_TITLE.match(lines[0]):
+        fail(1, "Line one must be # CARD: <title> with a parenthesized YYYY-MM-DD date.")
+    found = {}
+    current = None
+    for line_no, line in enumerate(lines, 1):
+        heading = re.match(r"^##\s+(.+?)\s*$", line)
+        if heading:
+            current = heading.group(1).strip()
+            if current.lower() in {k.lower() for k in found}:
+                current = None
+            else:
+                found[current] = [line_no, ""]
+        elif current:
+            found[current][1] += "\n" + line
+    first_heading = next((n for n, line in enumerate(lines) if line.startswith("## ")), len(lines))
+    models = [(n, line) for n, line in enumerate(lines[:first_heading], 1) if re.match(r"^Model:", line)]
+    if len(models) != 1:
+        fail(1, "The header (before the first ## heading) needs exactly one Model: line.")
+    else:
+        named = models[0][1][len("Model:"):].strip()
+        if not re.search(r"[A-Za-z]", named) or re.match(r"(?i)(?:inherit|default|same\b|the desk'?s)", named):
+            fail(1, "The Model: line must name the model; a lane never inherits the desk's.")
+        else:
+            found["MODEL"] = [models[0][0], named]
+    words_at = next((n for n, line in enumerate(lines) if WORDS_BLOCK.match(line)), None)
+    if words_at is None:
+        fail(2, "Needs an Operator's words, verbatim: block.")
+    else:
+        block = [lines[words_at]]
+        for line in lines[words_at + 1:]:
+            if not line.strip() or line.startswith("#"):
+                break
+            block.append(line)
+        if not DATED_QUOTE.search("\n".join(block)):
+            fail(2, "Operator's words, verbatim: needs at least one quote led by its date or clock time.")
+
+    def section(prefix):
+        return next((v for k, v in found.items() if k != "MODEL" and k.lower().startswith(prefix)), None)
+
+    what = section("what this is")
+    if not what or not what[1].strip():
+        fail(2, "Missing or empty ## What this is section.")
+    if not any(CARD_PATH.search(line) and re.search(r"\b[\w.-]+\.md\b", line)
+               and re.search(r"\bfirst minute\b", line, re.I) and "STATUS: RUNNING" in line for line in lines):
+        fail(3, "One line must name the output file path, first minute and STATUS: RUNNING.")
+    bounds = section("boundaries")
+    if not bounds or not bounds[1].strip():
+        fail(5, "Missing or empty ## Boundaries section.")
+    commit = section("commit")
+    if not (commit and commit[1].strip()) and not NO_COMMIT.search(text):
+        fail(5, "Needs a ## Commit section or a no-commit line.")
+    shape = section("output.md shape") or section("done") or section("return")
+    if not shape or not re.search(r"\bverdict\b|\bSTATUS\b", shape[1], re.I):
+        fail(9, "Needs a ## OUTPUT.md shape (or Done when, Return) section naming the verdict or STATUS line.")
+    if EM_DASH in text or EN_DASH in text:
+        fail(12, "Remove em-dashes and en-dashes.")
+    if len(lines) > MAX_LINES:
+        fail(12, f"Card has {len(lines)} lines; maximum is {MAX_LINES}.")
+    return sorted(failures), found
+
+
+def check_card(text, withhold=False, form="codex"):
+    """Return (failures, found, form) for the named form; auto picks it from line one."""
+    if form == "auto":
+        form = detect_form(text)
+    if form == "claude":
+        return (*check_claude(text), form)
+    return (*check(text, withhold), form)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("card", type=Path)
+    parser.add_argument("--form", choices=["codex", "claude", "auto"], default="codex",
+                        help="codex (default; the Codex launcher), claude (the Claude lane card), auto (by line one)")
     parser.add_argument("--withhold-words", action="store_true")
     args = parser.parse_args()
+    if args.withhold_words and args.form == "claude":
+        parser.error("--withhold-words cards use the Codex form")
     try:
         text = args.card.read_text(encoding="utf-8-sig")
     except (OSError, UnicodeError) as exc:
         print(f"FAIL 0: Cannot read card: {exc}")
         return 1
-    failures, found = check(text, args.withhold_words)
+    failures, found, form = check_card(text, args.withhold_words, args.form)
+    if args.form != "codex":
+        print(f"FORM: {form}")
     for number, message in failures:
         print(f"FAIL {number}: {message}")
     if not failures:
         print("PASS")
+    if form == "claude":
+        print("MANUAL 6: Read the work, Checks and Walk sections for checkability.")
+        print("MANUAL 11: Read the whole card for added scope and unsupported claims.")
+        print("MANUAL 10: Read the work section for requirements a script cannot judge.")
+        return int(bool(failures))
     print(f"MANUAL 6: Read DONE WHEN at line {found.get('DONE WHEN', ['missing'])[0]} for checkability.")
     print("MANUAL 11: Read the whole card for added scope and unsupported claims.")
     if args.withhold_words:

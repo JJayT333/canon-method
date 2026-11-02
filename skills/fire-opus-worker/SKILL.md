@@ -17,6 +17,7 @@ Big or long work for a Claude worker; the desk sends it to a lane (the law: ever
 
 ## Steps
 1. Write the card text; keep a copy in the lane folder as CARD.md.
+1a. Gate the card before the fire: run `pwsh -NoProfile -File launchers/check_card.ps1 -Card <CARD.md>` from the method root (the same checker the Codex launcher runs, in its Claude lane form). Exit 0 only on PASS; a FAIL means the card is fixed and rerun before any Agent call. The lane's OUTPUT.md names the check result in its first lines.
 2. Fire with the Agent tool: subagent general-purpose, the model the card names, run in the background, the card as the prompt, and the instruction to reply with only the output path and its last line.
 3. Within the first minute run `launchers/check-lane.ps1 -Receipt <OUTPUT.md> -Repo <repo> -Worktree <worktree> -Branch <branch>`; write RUNNING only when the receipt exists and the worktree is on the intended branch.
 4. When the completion notice arrives: open the output file in full; one plain line per finding reaches the operator, worst first; fix what is the desk's; a finding that needs the operator's word goes to NEEDS THE OPERATOR.
