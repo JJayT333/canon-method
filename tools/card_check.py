@@ -126,8 +126,14 @@ NO_COMMIT = re.compile(r"\bno (?:git )?commits?\b|\bnever commits?\b|\bcommit no
 WORDS_BLOCK = re.compile(r"^(?:Operator's|The operator's|Operator) words, verbatim\b.*:")
 
 
-def detect_form(text):
-    """The Claude lane form starts '# CARD:'; everything else is read as the Codex form."""
+def detect_form(text, withhold=False):
+    """The Claude lane form starts '# CARD:'; everything else is read as the Codex form.
+
+    A withhold-words card is always the Codex form, whatever its line one: the Claude lane
+    form quotes the operator by design, so auto never selects it for a withheld card.
+    """
+    if withhold:
+        return "codex"
     return "claude" if text.startswith("# CARD:") else "codex"
 
 
@@ -203,7 +209,7 @@ def check_claude(text):
 def check_card(text, withhold=False, form="codex"):
     """Return (failures, found, form) for the named form; auto picks it from line one."""
     if form == "auto":
-        form = detect_form(text)
+        form = detect_form(text, withhold)
     if form == "claude":
         return (*check_claude(text), form)
     return (*check(text, withhold), form)
