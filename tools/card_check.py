@@ -33,6 +33,8 @@ NUM = {"OBJECTIVE": 2, "STARTING STATE": 10, "SAVE AS YOU GO": 3,
        "DONE WHEN": 6, "VERIFY": 10, "TIME LIMIT": 7, "RETURN": 9}
 WORDS = r"(?:Operator's|The operator's|Operator) words"
 MAX_LINES = 60
+EM_DASH = chr(0x2014)
+EN_DASH = chr(0x2013)
 
 
 def check(text, withhold=False):
@@ -104,7 +106,7 @@ def check(text, withhold=False):
     ret = value("RETURN")
     if ret and any(not re.search(r'\b' + label + r'\b', ret) for label in ("VERIFIED", "INFERRED", "UNVERIFIED", "NOT FOUND", "MISSING FACTS")):
         fail(9, "RETURN needs VERIFIED, INFERRED, UNVERIFIED, NOT FOUND and MISSING FACTS.")
-    if '—' in text or '–' in text:
+    if EM_DASH in text or EN_DASH in text:
         fail(12, "Remove em-dashes and en-dashes.")
     if len(lines) > MAX_LINES:
         fail(12, f"Card has {len(lines)} lines; maximum is {MAX_LINES}.")

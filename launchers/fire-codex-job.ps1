@@ -18,7 +18,7 @@ Paths come from the config file: ../config.json beside this folder, else ../conf
 
 The card checker (../tools/card_check.py) refuses failing cards before engine discovery unless -SkipCardCheck.
 -DryRun checks the card, writes the receipt and exits without starting Codex. Memories are off unless -Memories.
-A checker card must never pass -Memories. The job runs on the Codex app's own login; API variables are cleared.
+A checker card must never pass -Memories. The job runs on the Codex app's own login; every ANTHROPIC_* and OPENAI_* environment variable is cleared first.
 #>
 param(
   [Parameter(Mandatory = $true)] [string] $Card,
@@ -112,7 +112,7 @@ if ($engine -eq '') {
   if (-not $engine) { $engine = Join-Path $binDir 'codex.exe' }
 }
 if (-not (Test-Path -LiteralPath $engine)) { throw "no Codex engine found at $engine" }
-Remove-Item Env:ANTHROPIC_API_KEY, Env:ANTHROPIC_AUTH_TOKEN, Env:ANTHROPIC_BASE_URL, Env:OPENAI_API_KEY -ErrorAction SilentlyContinue
+Get-ChildItem Env: | Where-Object { $_.Name -match '^(ANTHROPIC|OPENAI)_' } | ForEach-Object { Remove-Item -LiteralPath "Env:$($_.Name)" -ErrorAction SilentlyContinue }
 
 "- engine: $engine ($((& $engine --version 2>&1 | Select-Object -First 1)))`n- model: $(if ($Model) { $Model } else { 'engine default' })`n- memories: $($Memories.IsPresent.ToString().ToLowerInvariant()) (per-run features.memories override)`n- stdin: prompt from evidence/PROMPT.txt, then closed" | Add-Content -LiteralPath $run
 
