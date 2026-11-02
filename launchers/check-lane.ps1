@@ -37,6 +37,7 @@ if ($Receipt) {
   } else { $lines += "RECEIPT MISSING: $Receipt" }
 }
 if ($Repo -and $Worktree) {
+  if (Test-Path -LiteralPath $Worktree) { $Worktree = (Resolve-Path -LiteralPath $Worktree).Path }
   $wt = (& git -C $Repo worktree list) -join "`n"
   $norm = $Worktree.Replace('\','/')
   if ($wt -match [regex]::Escape($norm)) { $lines += "WORKTREE registered at the intended path: YES" } else { $lines += "WORKTREE registered at the intended path: NO (git worktree list does not show $norm)" }

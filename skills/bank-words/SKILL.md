@@ -12,7 +12,7 @@ Every message from the operator, every time, including greetings, dismissals and
 
 ## Inputs
 - The message, exactly as typed or dictated, typos kept.
-- The clock minute (`date +%H:%M`), read now, never estimated.
+- The clock minute, read now by command, never estimated: `Get-Date -Format HH:mm` in PowerShell, `date +%H:%M` in a POSIX shell.
 - Today's `<JOURNAL-PATH>/<date>-words.md` (create with the day's header if absent).
 - The next entry number (count the existing `[N` entries).
 
@@ -21,7 +21,7 @@ Every message from the operator, every time, including greetings, dismissals and
 2. Read `.desk-lock`. If it is not yours: write the entry to `record/landing/<engine>-AFTER-CLOSE-<date>.md` for the desk to sweep, and stop here; no journal write, no commit.
 3. Append `[N#] HH:MM TAG (typed or dictated, which window):` then a blank line, then the message as a `>` quote, line breaks kept.
 4. Tags: RULED, ORDER, THOUGHT, CORRECTION, OPEN, ASK; more than one joined with a slash.
-5. Under it, one "Desk reading" line only when the reading is not obvious: which repo an "it" names, what a garble is taken as, what is OPEN.
+5. Under it, at most one line of the desk's reading, and only when the message needs one: what an ambiguous word refers to, how a garbled phrase was understood, what stays OPEN.
 6. A cut-off sentence gets its last words kept and OPEN; ask only if the ending changes what you would do.
 7. Commit after the bank, or with the work it triggers, whichever is sooner.
 8. Show the banked entry in the reply in one line: entry number, the saved line, file, commit.

@@ -53,6 +53,25 @@ open the desk  ->  bank words  ->  card  ->  fire  ->  check  ->  merge on your 
 
 Two words stop things: **ABORT** in capitals stops everything the desk started. **pause** stops nothing and brings the running list current (`skills/abort-and-pause`).
 
+## The record files
+
+The method keeps its state in a few plain files. None exist on day one; the desk creates each the first time it needs it and says so.
+
+| File | What it holds | Shape |
+|---|---|---|
+| `<JOURNAL-PATH>/<date>-words.md` | every message you send, verbatim, numbered, with the clock minute and a tag | one `[N#] HH:MM TAG` header per message, the message as a block quote under it; private, outside any shared repository |
+| `record/notes/<date>.md` | the day note: what happened, what you decided, what is next | dated entries during the day; three close-out lines at the end |
+| `record/RUNNING.md` | the running list: every lane the desk started that is still alive | one line per lane: name, record folder, process identity, stop action |
+| `record/landing/<job>-<mmdd>/` | one folder per card: `CARD.md`, `OUTPUT.md` (the lane's receipt, STATUS last), `evidence/` | the card shape is in `cards/`; `evidence/` is ignored by git |
+| `record/landing/DESK-HANDOFF-<date>.md` | the handoff the next chat opens from | the product block first, then your binding words, verified state, the plan |
+| `record/PARKED.md` | rare findings parked under decision 05 | one line per finding |
+| `record/registers/settled.md`, `corrections.md`, `craft.md` | the map of rulings, the desk's own failures, method lessons | one entry per item, newest last |
+| `docs/THE-PRODUCT.md` | one paragraph on what is being built, dated | its first block is copied verbatim into every handoff |
+| `decisions/NN-<slug>.md` | your rulings that bind future work | your words at the top, numbered points, what it replaces |
+| `.desk-lock` | which chat is the desk right now | session name, clock, writer; deleted at close |
+
+Clock reads are always a command, never a guess: `Get-Date -Format HH:mm` in PowerShell, `date +%H:%M` in a POSIX shell.
+
 ## The cards
 
 A card is one file a worker can read in one screen and act on with no questions. The checker (`tools/card_check.py`) enforces the mechanical parts: line one `Runs on:` with a reason in parentheses; the fields in order; the objective quoting the operator's words with a date; a save-as-you-go line with an exact path and STATUS: RUNNING; a time limit of at most twelve hours; a return shape that labels every claim VERIFIED, INFERRED, UNVERIFIED or NOT FOUND and ends with MISSING FACTS; no em-dashes; at most sixty lines. Run it by hand:
@@ -70,7 +89,8 @@ The Claude lane card (`cards/TEMPLATE-claude-lane-card.md`) is looser in shape; 
 - **The Claude lane is fired from inside Claude Code** with its Agent tool. There is no shell launcher for it here; the skill says what the call carries.
 - **Everything in `config.example.json` and the three placeholders in the law are yours to rewrite.** So are the names: the method calls the worker "the Codex worker" and the person "the operator". Rename them in `config.json` and the law if you want a name.
 - **The journal is private.** Put it outside any repository you share. The method's own repository never holds it.
-- **No board, no dashboard.** The record is files: a day note, the journal, the decisions, and one folder per card with its output and evidence. Build a viewer if you want one; the files are enough to start.
+- **No board, no dashboard.** The record is the files in the table above. Build a viewer if you want one; the files are enough to start.
+- **The orphan sweep needs a script of your own.** `skills/orphan-sweep` describes it (list processes older than a cutoff, keep anything a live editor or agent owns, kill on your click); it is not shipped because every machine's keep list differs.
 
 ## Why it is shaped this way
 

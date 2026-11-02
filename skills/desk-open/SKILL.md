@@ -12,10 +12,10 @@ The first message of a new desk chat, whatever it says, unless it is ABORT.
 
 ## Inputs
 - `.desk-lock` at the method root (present or absent).
-- Yesterday's and today's journal files, `<JOURNAL-PATH>/<date>-words.md`.
+- Yesterday's and today's journal files, `<JOURNAL-PATH>/<date>-words.md` (on the first day, neither exists yet).
 - The last handoff (`record/landing/DESK-HANDOFF-<date>.md`), read in full.
 - The landing zones: `record/landing/**` and every `<project>/.canon-return/**`.
-- The clock (`date +%H:%M`), read before every bank.
+- The clock, read by command before every bank: `Get-Date -Format HH:mm` in PowerShell, `date +%H:%M` in a POSIX shell.
 
 ## Steps
 1. Read `.desk-lock`. Absent: write it (session name, clock, writer). Present with another writer: say its name and time in one line; if the operator is talking to you, take it and note that you took it; otherwise landing-only. A worker never takes the lock.
@@ -37,6 +37,7 @@ The first message of a new desk chat, whatever it says, unless it is ABORT.
 The lock is yours; the journal has today's first entry with a clock minute; the roadmap reply names the model, the orphan count and what was opened; the commit exists.
 
 ## Edge cases
+- First open ever: no journal, no handoff, no landing files. Create `.desk-lock`, today's journal with its header, `record/notes/<date>.md` (the day note), `record/RUNNING.md` (the running list) and `docs/THE-PRODUCT.md` (one paragraph on what is being built), say in the roadmap that this is the first open, and go on. See the README's section on the record files.
 - A checker or lane from yesterday is still alive: it goes in RUNNING with its stop path, never restarted.
 - The model on the wheel may differ from yesterday's; say which model it is in line one.
 - A corrupted surface (mojibake, tripled blank lines) is rebuilt from HEAD's structure keeping its added lines; say so in the day note.
